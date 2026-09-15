@@ -29,3 +29,20 @@ func TestIssue1938_SpacedQueryParameter(t *testing.T) {
 		require.Equal(t, uint64(42), actual)
 	})
 }
+
+func TestIssue1938_QuotedJSONWithPositionalArgument(t *testing.T) {
+	clickhouse_tests.TestProtocols(t, func(t *testing.T, protocol clickhouse.Protocol) {
+		ctx := context.Background()
+		conn, err := clickhouse_tests.GetConnection("issues", t, protocol, nil, nil, nil)
+		require.NoError(t, err)
+		t.Cleanup(func() { conn.Close() })
+
+		var literal string
+		var bound uint8
+		require.NoError(t, conn.QueryRow(ctx,
+			`SELECT '{"key":"value"}', ?`, 7,
+		).Scan(&literal, &bound))
+		require.Equal(t, `{"key":"value"}`, literal)
+		require.Equal(t, uint8(7), bound)
+	})
+}
